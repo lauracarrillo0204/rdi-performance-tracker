@@ -1,0 +1,245 @@
+<h2 class="sr-only">Tracker de RDI pendientes — listado de campañas activas con estado y prioridad editable</h2>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans,system-ui,sans-serif);background:var(--color-background-tertiary);color:var(--color-text-primary);font-size:14px}
+.topbar{display:flex;align-items:center;gap:12px;padding:12px 20px;background:var(--color-background-primary);border-bottom:0.5px solid var(--color-border-tertiary);flex-wrap:wrap}
+.topbar-title{font-size:15px;font-weight:500;display:flex;align-items:center;gap:8px}
+.topbar-title i{font-size:18px;color:var(--color-text-secondary)}
+.topbar-right{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;padding:16px 20px}
+.metric{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px 14px}
+.metric-label{font-size:12px;color:var(--color-text-secondary);margin-bottom:4px}
+.metric-val{font-size:22px;font-weight:500}
+.m-pend .metric-val{color:var(--color-text-warning)}
+.m-ok .metric-val{color:var(--color-text-success)}
+.m-alta .metric-val{color:var(--color-text-danger)}
+.m-total .metric-val{color:var(--color-text-primary)}
+.filters{display:flex;align-items:center;gap:8px;padding:0 20px 12px;flex-wrap:wrap}
+.filters input{flex:1;min-width:180px;max-width:280px;padding:6px 10px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary);font-size:13px;outline:none}
+.filters input:focus{border-color:var(--color-border-primary)}
+.filter-select{padding:6px 10px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary);font-size:13px;outline:none;cursor:pointer}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary);font-size:13px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--color-background-secondary)}
+.btn-primary{background:var(--color-background-info);color:var(--color-text-info);border-color:var(--color-border-info)}
+.btn-primary:hover{opacity:.85}
+.table-wrap{overflow-x:auto;padding:0 20px 20px}
+table{width:100%;border-collapse:collapse;background:var(--color-background-primary);border-radius:var(--border-radius-lg);overflow:hidden;border:0.5px solid var(--color-border-tertiary)}
+thead th{padding:10px 12px;font-size:12px;font-weight:500;color:var(--color-text-secondary);text-align:left;border-bottom:0.5px solid var(--color-border-tertiary);white-space:nowrap;background:var(--color-background-secondary)}
+tbody tr{border-bottom:0.5px solid var(--color-border-tertiary);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--color-background-secondary)}
+tbody td{padding:9px 12px;vertical-align:middle;white-space:nowrap}
+td.obs{white-space:normal;max-width:200px;font-size:12px;color:var(--color-text-secondary)}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500}
+.b-pendiente{background:var(--color-background-warning);color:var(--color-text-warning)}
+.b-enviado{background:var(--color-background-success);color:var(--color-text-success)}
+.b-solucionado{background:var(--color-background-info);color:var(--color-text-info)}
+.prio-btn{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;border:0.5px solid transparent;transition:all .15s;white-space:nowrap}
+.p-alta{background:#FCEBEB;color:#A32D2D;border-color:#F7C1C1}
+.p-media{background:#FAEEDA;color:#854F0B;border-color:#FAC775}
+.p-baja{background:#EAF3DE;color:#3B6D11;border-color:#C0DD97}
+.p-none{background:var(--color-background-secondary);color:var(--color-text-secondary);border-color:var(--color-border-tertiary)}
+.estado-sel{padding:4px 8px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary);font-size:12px;cursor:pointer;outline:none}
+.empty{text-align:center;padding:48px;color:var(--color-text-secondary);font-size:13px}
+.import-area{border:1.5px dashed var(--color-border-secondary);border-radius:var(--border-radius-lg);padding:32px;text-align:center;cursor:pointer;color:var(--color-text-secondary);font-size:13px;transition:border-color .2s;margin:20px}
+.import-area:hover{border-color:var(--color-text-info)}
+.import-area i{font-size:28px;display:block;margin-bottom:8px;color:var(--color-text-secondary)}
+#fileInput{display:none}
+.tag-new{font-size:10px;padding:1px 6px;border-radius:20px;background:var(--color-background-info);color:var(--color-text-info);margin-left:4px;vertical-align:middle}
+</style>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<div class="topbar">
+  <div class="topbar-title">
+    <i class="ti ti-report-analytics" aria-hidden="true"></i>
+    RDI Tracker — campañas activas
+  </div>
+  <div class="topbar-right">
+    <button class="btn" onclick="document.getElementById('fileInput').click()"><i class="ti ti-upload" aria-hidden="true"></i> Cargar Excel / CSV</button>
+    <button class="btn" onclick="exportar()"><i class="ti ti-download" aria-hidden="true"></i> Exportar</button>
+    <button class="btn" onclick="cargarEjemplo()"><i class="ti ti-table" aria-hidden="true"></i> Ver ejemplo</button>
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+  </div>
+</div>
+
+<div class="metrics">
+  <div class="metric m-total"><div class="metric-label">Total campañas</div><div class="metric-val" id="mTotal">0</div></div>
+  <div class="metric m-pend"><div class="metric-label">Pendientes</div><div class="metric-val" id="mPend">0</div></div>
+  <div class="metric m-ok"><div class="metric-label">Enviados</div><div class="metric-val" id="mOk">0</div></div>
+  <div class="metric m-alta"><div class="metric-label">Prioridad alta</div><div class="metric-val" id="mAlta">0</div></div>
+</div>
+
+<div class="filters">
+  <input type="text" id="search" placeholder="Buscar cliente, campaña, responsable…" oninput="renderTabla()">
+  <select class="filter-select" id="fEstado" onchange="renderTabla()">
+    <option value="">Todos los estados</option>
+    <option>Pendiente</option>
+    <option>Enviado</option>
+    <option>Solucionado</option>
+  </select>
+  <select class="filter-select" id="fPrio" onchange="renderTabla()">
+    <option value="">Todas las prioridades</option>
+    <option>Alta</option>
+    <option>Media</option>
+    <option>Baja</option>
+  </select>
+  <select class="filter-select" id="fResp" onchange="renderTabla()">
+    <option value="">Todos los responsables</option>
+  </select>
+</div>
+
+<div class="table-wrap">
+  <div id="importArea" class="import-area" onclick="document.getElementById('fileInput').click()">
+    <i class="ti ti-file-spreadsheet" aria-hidden="true"></i>
+    Carga tu sábana de Excel o CSV para comenzar<br>
+    <small style="font-size:11px;margin-top:6px;display:block">O haz clic en "Ver ejemplo" para probar con datos de muestra</small>
+  </div>
+  <table id="mainTable" style="display:none">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Cliente</th>
+        <th>Campaña</th>
+        <th>Service partner</th>
+        <th>Performance partner</th>
+        <th>Fecha solicitud</th>
+        <th>Fecha entrega RDI</th>
+        <th>Prioridad</th>
+        <th>Observaciones</th>
+        <th>Responsable</th>
+        <th>Estado</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  <div id="emptyMsg" class="empty" style="display:none">No hay resultados para este filtro.</div>
+</div>
+
+<script>
+let rows = [];
+const PRIOS = ['Alta','Media','Baja'];
+const ESTADOS = ['Pendiente','Enviado','Solucionado'];
+
+const SAMPLE = [
+  {Cliente:'Pollo Bucanero',Campaña:'Salchicha Parrillera','Service Partner':'Alejandra Cardona','Performance Partner':'Paula Leal','Fecha solicitud':'','Fecha de entrega RDI':'',Prioridad:'Alta',Observaciones:'*Campaña Nueva',Responsable:'Yisel',Estado:'Pendiente'},
+  {Cliente:'Cencosud (Tiendas Metro)',Campaña:'Metro Padres','Service Partner':'Alejandra Cardona','Performance Partner':'Paula Leal','Fecha solicitud':'17/06/2026','Fecha de entrega RDI':'17/06/2026',Prioridad:'Solucionado',Observaciones:'*Campaña Nueva',Responsable:'Paula Leal',Estado:'Enviado'},
+  {Cliente:'Bancolombia',Campaña:'Cuenta de Ahorros Q3','Service Partner':'Camilo Torres','Performance Partner':'Sara Mejía','Fecha solicitud':'15/06/2026','Fecha de entrega RDI':'18/06/2026',Prioridad:'',Observaciones:'',Responsable:'Yisel',Estado:'Pendiente'},
+  {Cliente:'Éxito',Campaña:'Temporada Mitad de Año','Service Partner':'Alejandra Cardona','Performance Partner':'Juan Ríos','Fecha solicitud':'10/06/2026','Fecha de entrega RDI':'20/06/2026',Prioridad:'Media',Observaciones:'Revisar creativos',Responsable:'Paula Leal',Estado:'Pendiente'},
+  {Cliente:'Claro Colombia',Campaña:'Plan Familia Ilimitado','Service Partner':'Natalia Ruiz','Performance Partner':'Sara Mejía','Fecha solicitud':'12/06/2026','Fecha de entrega RDI':'19/06/2026',Prioridad:'Baja',Observaciones:'',Responsable:'Juan Ríos',Estado:'Enviado'},
+];
+
+function cargarEjemplo(){rows=SAMPLE.map(r=>({...r}));init()}
+
+function nextPrio(p){
+  if(!p||p==='') return 'Alta';
+  const i=PRIOS.indexOf(p);
+  return i===-1?'Alta':(i+1<PRIOS.length?PRIOS[i+1]:'');
+}
+function prioClass(p){
+  if(p==='Alta') return 'p-alta';
+  if(p==='Media') return 'p-media';
+  if(p==='Baja') return 'p-baja';
+  return 'p-none';
+}
+function estadoBadge(e){
+  if(e==='Enviado') return 'b-enviado';
+  if(e==='Solucionado') return 'b-solucionado';
+  return 'b-pendiente';
+}
+
+function updatePrio(i){
+  rows[i].Prioridad=nextPrio(rows[i].Prioridad||'');
+  updateMetrics();renderTabla();
+}
+function updateEstado(i,val){
+  rows[i].Estado=val;
+  updateMetrics();renderTabla();
+}
+
+function updateMetrics(){
+  document.getElementById('mTotal').textContent=rows.length;
+  document.getElementById('mPend').textContent=rows.filter(r=>r.Estado==='Pendiente').length;
+  document.getElementById('mOk').textContent=rows.filter(r=>r.Estado==='Enviado'||r.Estado==='Solucionado').length;
+  document.getElementById('mAlta').textContent=rows.filter(r=>r.Prioridad==='Alta').length;
+}
+
+function init(){
+  const resps=[...new Set(rows.map(r=>r.Responsable||'').filter(Boolean))].sort();
+  const sel=document.getElementById('fResp');
+  sel.innerHTML='<option value="">Todos los responsables</option>'+resps.map(r=>`<option>${r}</option>`).join('');
+  updateMetrics();
+  renderTabla();
+  document.getElementById('importArea').style.display='none';
+  document.getElementById('mainTable').style.display='table';
+}
+
+function renderTabla(){
+  const q=(document.getElementById('search').value||'').toLowerCase();
+  const fe=document.getElementById('fEstado').value;
+  const fp=document.getElementById('fPrio').value;
+  const fr=document.getElementById('fResp').value;
+  const tbody=document.getElementById('tbody');
+  tbody.innerHTML='';
+  let count=0;
+  rows.forEach((r,i)=>{
+    if(fe&&r.Estado!==fe) return;
+    if(fp&&r.Prioridad!==fp) return;
+    if(fr&&r.Responsable!==fr) return;
+    const str=Object.values(r).join(' ').toLowerCase();
+    if(q&&!str.includes(q)) return;
+    count++;
+    const pLabel=r.Prioridad||'—';
+    const obs=r.Observaciones||'';
+    const isNew=obs.includes('*Campaña Nueva');
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td style="color:var(--color-text-secondary);font-size:12px">${i+1}</td>
+      <td style="font-weight:500">${r.Cliente||''}</td>
+      <td>${r.Campaña||''}${isNew?'<span class="tag-new">nueva</span>':''}</td>
+      <td style="color:var(--color-text-secondary)">${r['Service Partner']||r['Service partner']||''}</td>
+      <td style="color:var(--color-text-secondary)">${r['Performance Partner']||r['Performance partner']||''}</td>
+      <td style="color:var(--color-text-secondary)">${r['Fecha solicitud']||'—'}</td>
+      <td style="color:var(--color-text-secondary)">${r['Fecha de entrega RDI']||r['Fecha entrega RDI']||'—'}</td>
+      <td><button class="prio-btn ${prioClass(r.Prioridad)}" onclick="updatePrio(${i})" title="Clic para cambiar prioridad"><i class="ti ti-flag-3" aria-hidden="true" style="font-size:12px"></i> ${pLabel}</button></td>
+      <td class="obs">${obs.replace('*Campaña Nueva','').trim()||'—'}</td>
+      <td>${r.Responsable||'—'}</td>
+      <td>
+        <select class="estado-sel" onchange="updateEstado(${i},this.value)">
+          ${ESTADOS.map(e=>`<option${r.Estado===e?' selected':''}>${e}</option>`).join('')}
+        </select>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('emptyMsg').style.display=count===0&&rows.length>0?'block':'none';
+}
+
+document.getElementById('fileInput').addEventListener('change',function(e){
+  const f=e.target.files[0];if(!f)return;
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    const wb=XLSX.read(ev.target.result,{type:'binary'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const data=XLSX.utils.sheet_to_json(ws,{defval:''});
+    if(!data.length){alert('El archivo está vacío.');return;}
+    rows=data.map(r=>({
+      ...r,
+      Prioridad:r.Prioridad||'',
+      Estado:r.Estado||'Pendiente'
+    }));
+    init();
+  };
+  reader.readAsBinaryString(f);
+  e.target.value='';
+});
+
+function exportar(){
+  if(!rows.length) return;
+  const ws=XLSX.utils.json_to_sheet(rows);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'RDI');
+  XLSX.writeFile(wb,'RDI_tracker_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+</script>
